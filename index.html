@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análise de Risco - Boletim Escolar</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+:root{--bg:#eef3f8;--card:#fff;--text:#0b1b33;--muted:#64748b;--line:#dbe3ee;--red:#dc2626;--amber:#d97706;--green:#16a34a;--blue:#2563eb}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(135deg,#0f2f66,#1f6feb);color:white;padding:24px 16px;text-align:center}header h1{margin:0;font-size:28px}header p{margin:7px 0 0;opacity:.95}
+main{max-width:1200px;margin:22px auto;padding:0 12px}.card{background:var(--card);border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:0 8px 22px rgba(15,47,102,.08)}
+.upload{border:2px dashed #9fb3c8;border-radius:16px;padding:24px;text-align:center;background:#f8fbff}.controls{display:flex;justify-content:center;gap:28px;flex-wrap:wrap;margin-top:24px;align-items:center}.controls input{width:82px;padding:7px;border:1px solid #cbd5e1;border-radius:8px}
+button{margin-top:22px;background:#2563eb;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-weight:bold;cursor:pointer}button:hover{filter:brightness(.95)}
+.status{margin-top:12px;color:var(--muted)}.small{font-size:12px;color:var(--muted)}.hidden{display:none}.turmaTitulo{font-size:22px;font-weight:bold;margin:0 0 12px;color:#0f2f66}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.metric{border:1px solid var(--line);border-radius:14px;padding:16px;background:#fbfdff}.metric span{color:var(--muted);font-weight:bold}.metric b{font-size:30px;display:block;margin-top:6px}
+table{width:100%;border-collapse:collapse;background:white;border:1px solid var(--line);border-radius:12px;overflow:hidden}th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}th{background:#f5f7fb}.badge{display:inline-block;border-radius:999px;padding:4px 9px;font-weight:bold;font-size:12px}.risco{background:#fee2e2;color:#b91c1c}.atencao{background:#fef3c7;color:#92400e}.ok{background:#dcfce7;color:#166534}.disciplinas{white-space:pre-line}.faltasAlta{color:#b91c1c;font-weight:bold}.aviso{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:10px;margin-top:12px}
+.actions{display:flex;justify-content:flex-end;margin-top:18px}.btnPdf{background:#16a34a}.exportBox{border:2px solid #bbf7d0;background:#f0fdf4}.card.alertaNm3{border-left:6px solid #d97706}.destaque{background:#fffbeb}.sectionTag{display:inline-block;background:#92400e;color:white;border-radius:999px;padding:5px 10px;font-weight:bold;font-size:12px;margin-bottom:8px}.card.alertaNm3 h2{margin-top:0;color:#92400e}.faltandoBox{border:1px solid #fed7aa;background:#fff7ed;border-radius:12px;padding:12px;margin-top:12px}.faltandoBox ul{margin:8px 0 0 18px;padding:0}.faltandoBox li{margin:5px 0}@media print{body{background:#fff}header,.upload,#btnPdf,.actions{display:none!important}main{max-width:100%;margin:0;padding:0}.card{box-shadow:none;border:1px solid #ddd;break-inside:avoid}table{font-size:11px}th,td{padding:6px}.hidden{display:block!important}}@media(max-width:850px){.grid{grid-template-columns:1fr}table{font-size:13px}.card{padding:14px}}
+
+.calendarGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:14px}.calendarCard{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fbfdff}.calendarCard h3{margin:0;padding:14px 16px;background:#e8f3df;color:#0f2f66}.calendarPreview{height:360px;background:#f8fafc;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.calendarPreview iframe{width:100%;height:100%;border:0}.calendarActions{display:flex;gap:10px;flex-wrap:wrap;padding:14px 16px}.calendarActions a{display:inline-block;text-decoration:none;background:#2563eb;color:#fff;border-radius:10px;padding:10px 14px;font-weight:bold}.calendarActions a.secondary{background:#16a34a}.calendarNote{font-size:13px;color:var(--muted);margin:8px 0 0}@media(max-width:850px){.calendarGrid{grid-template-columns:1fr}.calendarPreview{height:300px}}@media print{#calendariosIniciais{display:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Análise de Risco - Boletim Escolar</h1>
+  <p><strong>Para analisar o boletim, gere o boletim completo da turma em:</strong> Lista de turma &gt; Detalhe da turma &gt; Boletim.</p>
+  <p>Identifica aluno, turma, NM3 lançada, disciplinas abaixo da média e risco por faltas.</p>
+</header>
+<main>
+<section class="card" id="calendariosIniciais">
+  <h2>Calendários Pedagógicos 2026</h2>
+  <p class="calendarNote">Consulte rapidamente os dois calendários antes de analisar o boletim.</p>
+  <div class="calendarGrid">
+    <div class="calendarCard">
+      <h3>Geral até a 1ª série</h3>
+      <div class="calendarPreview">
+        <iframe src="CALENDÁRIO PEDAGÓGICO_2026 - vf.2 - GERAL até a 1ª série.pdf#page=1" title="Calendário Pedagógico 2026 - Geral até a 1ª série"></iframe>
+      </div>
+      <div class="calendarActions">
+        <a href="CALENDÁRIO PEDAGÓGICO_2026 - vf.2 - GERAL até a 1ª série.pdf" target="_blank" rel="noopener">Abrir calendário</a>
+        <a class="secondary" href="CALENDÁRIO PEDAGÓGICO_2026 - vf.2 - GERAL até a 1ª série.pdf" download>Baixar PDF</a>
+      </div>
+    </div>
+    <div class="calendarCard">
+      <h3>2ª e 3ª série</h3>
+      <div class="calendarPreview">
+        <iframe src="CALENDÁRIO PEDAGÓGICO_2026 - vf.3 - 2ª e 3ª série.pdf#page=1" title="Calendário Pedagógico 2026 - 2ª e 3ª série"></iframe>
+      </div>
+      <div class="calendarActions">
+        <a href="CALENDÁRIO PEDAGÓGICO_2026 - vf.3 - 2ª e 3ª série.pdf" target="_blank" rel="noopener">Abrir calendário</a>
+        <a class="secondary" href="CALENDÁRIO PEDAGÓGICO_2026 - vf.3 - 2ª e 3ª série.pdf" download>Baixar PDF</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="card upload">
+  <h2>Anexar boletim em PDF</h2>
+  <input id="pdfFile" type="file" accept="application/pdf">
+  <div class="controls">
+    <label>Média mínima: <input id="mediaMinima" type="number" min="0" max="10" step="0.1" value="6"></label>
+    <label>Faltas em atenção: <input id="limiteFaltas" type="number" min="0" step="1" value="10"></label>
+  </div>
+  <button id="btnAnalisar">Analisar boletim</button>
+  <div id="status" class="status"></div>
+  <p class="small">Critério: lista apenas disciplinas com 1ºMTF abaixo da média mínima. Quando 1ºMTF não existir, usa 1ºMT. Faltas em risco somente quando um componente curricular atingir ou ultrapassar o limite informado.</p>
+</section>
+
+<section id="results" class="hidden">
+  <div id="reportArea">
+    <section class="card">
+      <h1 style="margin-top:0">Análise de Risco - Boletim Escolar</h1>
+      <p><strong>Para analisar o boletim gere o boletim completo da turma em:</strong> Lista de turma &gt; Detalhe da turma &gt; Boletim.</p>
+      <p>Identifica aluno, turma, NM3 lançada, disciplinas abaixo da média e risco por faltas.</p>
+      <div id="turmaTitulo" class="turmaTitulo">TURMA:</div>
+    </section>
+
+    <section class="card alertaNm3 destaque" id="relatorioNm3Faltando">
+      <div class="sectionTag">RELATÓRIO ACIMA</div>
+      <h2>Alunos com NM3 faltando</h2>
+      <p>Lista dos alunos que possuem uma ou mais disciplinas sem lançamento de NM3. Este relatório aparece antes do resumo geral para facilitar a conferência.</p>
+      <div id="listaNm3Faltando" class="faltandoBox"></div>
+    </section>
+
+    <section class="card">
+      <h2>Resumo geral da turma</h2>
+      <div class="grid">
+        <div class="metric"><span>Total de alunos</span><b id="totalAlunos">0</b></div>
+        <div class="metric"><span>Alunos em risco</span><b id="totalRisco">0</b></div>
+        <div class="metric"><span>NM3 completa</span><b id="totalNm3">0</b></div>
+        <div class="metric"><span>NM3 faltando</span><b id="totalNm3Faltando">0</b></div>
+        <div class="metric"><span>Alunos com componente acima do limite</span><b id="totalFaltas">0</b></div>
+      </div>
+    </section>
+
+    <section class="card">
+    <h2>Detalhamento por aluno</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Aluno</th>
+          <th>Situação</th>
+          <th>NM3</th>
+          <th>Faltas</th>
+          <th>Disciplinas em risco</th>
+          <th>Observação</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </section>
+  </div>
+  <section class="card exportBox">
+    <h2>Baixar relatório final</h2>
+    <p>Use esta opção para baixar em PDF os dados gerados: relatório de NM3 faltando, resumo geral e detalhamento por aluno.</p>
+    <div class="actions"><button id="btnPdf" class="btnPdf" type="button">Baixar dados gerados em PDF</button></div>
+  </section>
+</section>
+</main>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const $ = id => document.getElementById(id);
+const isNum = s => /^\d+(?:[.,]\d+)?$/.test(String(s).trim());
+const toNum = s => Number(String(s).replace(',', '.'));
+const clean = s => String(s || '').replace(/\s+/g,' ').trim();
+const norm = s => clean(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+
+function makeItems(textContent){
+  return textContent.items
+    .map(i => ({str: clean(i.str), x: i.transform[4], y: i.transform[5]}))
+    .filter(i => i.str);
+}
+
+function sameLine(items, y, tol=3){return items.filter(i => Math.abs(i.y-y)<=tol).sort((a,b)=>a.x-b.x)}
+function textBetweenOnLine(items, labelText, stopTexts){
+  const label = items.find(i => norm(i.str).startsWith(labelText));
+  if(!label) return '';
+  const line = sameLine(items, label.y, 4);
+  let stopX = Infinity;
+  for(const st of stopTexts){
+    const stop = line.find(i => i.x > label.x && norm(i.str).startsWith(st));
+    if(stop) stopX = Math.min(stopX, stop.x);
+  }
+  const parts = line.filter(i => i.x > label.x + 30 && i.x < stopX - 2).map(i => i.str);
+  return clean(parts.join(' '));
+}
+
+function fallbackHeader(fullText, field, stop){
+  const re = new RegExp(field + '\\s*:?\\s*([\\s\\S]*?)\\s*' + stop, 'i');
+  const m = fullText.match(re);
+  return m ? clean(m[1]) : '';
+}
+
+function getHeader(items, fullText){
+  let aluno = textBetweenOnLine(items, 'ESTUDANTE', ['TIPO']);
+  let turma = textBetweenOnLine(items, 'TURMA', ['TURNO']);
+  if(!aluno) aluno = fallbackHeader(fullText, 'ESTUDANTE', 'TIPO DE ENSINO');
+  if(!turma) turma = fallbackHeader(fullText, 'TURMA', 'TURNO');
+  aluno = aluno.replace(/^[:\s]+|[:\s]+$/g,'');
+  turma = turma.replace(/^[:\s]+|[:\s]+$/g,'');
+  return {aluno: aluno || 'Aluno sem nome identificado', turma: turma || 'Turma não identificada'};
+}
+
+function valueIn(rowItems, xmin, xmax){
+  const cand = rowItems.filter(i => i.x>=xmin && i.x<=xmax && isNum(i.str)).sort((a,b)=>a.x-b.x);
+  return cand.length ? toNum(cand[cand.length-1].str) : null;
+}
+
+function parseRows(items){
+  const rowNums = items
+    .filter(i => i.x < 35 && /^\d{1,2}$/.test(i.str))
+    .map(i => ({n:Number(i.str), y:i.y}))
+    .filter(r => r.n>=1 && r.n<=35);
+  const unique = [];
+  const seen = new Set();
+  rowNums.sort((a,b)=>a.n-b.n).forEach(r => { if(!seen.has(r.n)){seen.add(r.n); unique.push(r)}; });
+  const rows = [];
+  for(let idx=0; idx<unique.length; idx++){
+    const r = unique[idx], next = unique[idx+1];
+    let yMin, yMax;
+    if(next){
+      yMin = Math.min(r.y, next.y) - 1;
+      yMax = Math.max(r.y, next.y) - 1;
+      if(r.y < next.y){ yMin = r.y - 1; yMax = next.y - 1; }
+      else { yMin = next.y + 1; yMax = r.y + 1; }
+    } else { yMin = r.y - 9; yMax = r.y + 9; }
+    // inclui palavras da disciplina que quebraram em duas linhas, sem invadir a próxima disciplina
+    const bandItems = items.filter(i => i.y >= Math.min(yMin,yMax)-0.5 && i.y <= Math.max(yMin,yMax)+0.5);
+    const rowItems = items.filter(i => Math.abs(i.y-r.y)<=4);
+    const discParts = bandItems.filter(i => i.x>=35 && i.x<=200).sort((a,b)=> (Math.abs(a.y-b.y)>2 ? (b.y-a.y) : (a.x-b.x))).map(i=>i.str);
+    let disciplina = clean(discParts.join(' '));
+    if(!disciplina || /Disciplinas/i.test(disciplina)) continue;
+    const nm3 = valueIn(rowItems, 238, 264);
+    const mt = valueIn(rowItems, 262, 286);
+    const mtf = valueIn(rowItems, 306, 332);
+    const faltas = valueIn(rowItems, 776, 797);
+    rows.push({n:r.n, disciplina, nm3, mt, mtf, faltas: faltas ?? 0});
+  }
+  return rows;
+}
+
+async function extrairAlunos(file){
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data: buffer}).promise;
+  const alunos = [];
+  for(let p=1; p<=pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const textContent = await page.getTextContent();
+    const items = makeItems(textContent);
+    const fullText = items.map(i=>i.str).join(' ');
+    if(!/ESTUDANTE/i.test(fullText) || !/TURMA/i.test(fullText)) continue;
+    const header = getHeader(items, fullText);
+    const rows = parseRows(items);
+    if(!rows.length) continue;
+    alunos.push({...header, rows, pagina:p});
+  }
+  return alunos;
+}
+
+function analisar(alunos){
+  const media = Number($('mediaMinima').value || 6);
+  const limiteFaltas = Number($('limiteFaltas').value || 10);
+  return alunos.map(a => {
+    const totalDisciplinas = a.rows.length;
+    const disciplinasSemNm3 = a.rows.filter(r => r.disciplina && r.nm3 === null).map(r => r.disciplina);
+    const nm3Lancadas = a.rows.filter(r => r.disciplina && r.nm3 !== null).length;
+    const emRisco = a.rows.filter(r => {
+      const notaBase = r.mtf !== null ? r.mtf : r.mt;
+      return notaBase !== null && notaBase < media;
+    }).map(r => {
+      const notaBase = r.mtf !== null ? r.mtf : r.mt;
+      return { disciplina: r.disciplina, media: notaBase };
+    });
+    const totalFaltas = a.rows.reduce((s,r)=>s+(Number(r.faltas)||0),0);
+    // Risco por faltas deve considerar apenas componente curricular acima do limite, não o TGF/total geral.
+    const faltasAltas = a.rows
+      .filter(r => (Number(r.faltas)||0) >= limiteFaltas)
+      .map(r => ({ disciplina: r.disciplina, faltas: Number(r.faltas)||0 }));
+    const situacao = emRisco.length || faltasAltas.length ? 'RISCO' : 'OK';
+    let obs = [];
+    if(emRisco.length) obs.push(`Possui ${emRisco.length} disciplina(s) abaixo de ${media.toFixed(1).replace('.', ',')}.`);
+    if(faltasAltas.length) obs.push(`Componentes com faltas acima do limite: ${faltasAltas.map(f => `${f.disciplina} (${f.faltas})`).join('; ')}.`);
+    if(!obs.length) obs.push('Sem risco pelos critérios informados.');
+    return {...a, totalDisciplinas, nm3Lancadas, disciplinasSemNm3, emRisco, totalFaltas, faltasAltas, situacao, obs:obs.join(' ')};
+  });
+}
+
+function render(dados){
+  const turma = dados.find(d => d.turma && d.turma !== 'Turma não identificada')?.turma || 'Turma não identificada';
+  $('turmaTitulo').textContent = `TURMA: ${turma}`;
+  $('totalAlunos').textContent = dados.length;
+  $('totalRisco').textContent = dados.filter(d=>d.situacao==='RISCO').length;
+  $('totalNm3').textContent = dados.filter(d=>d.nm3Lancadas===d.totalDisciplinas).length;
+  const nm3Faltando = dados.filter(d=>d.disciplinasSemNm3 && d.disciplinasSemNm3.length);
+  $('totalNm3Faltando').textContent = nm3Faltando.length;
+  const limiteFaltas = Number($('limiteFaltas').value || 10);
+  $('totalFaltas').textContent = dados.filter(d=>d.faltasAltas && d.faltasAltas.length).length;
+  const listaNm3 = $('listaNm3Faltando');
+  if(nm3Faltando.length){
+    listaNm3.innerHTML = `<p><strong>${nm3Faltando.length} aluno(s) com NM3 faltando</strong></p>` +
+      `<table><thead><tr><th>Aluno</th><th>NM3 lançada</th><th>Disciplinas sem NM3</th></tr></thead><tbody>` +
+      nm3Faltando.map(d => `<tr><td><strong>${d.aluno}</strong></td><td><span class="badge atencao">${d.nm3Lancadas}/${d.totalDisciplinas}</span></td><td class="disciplinas">${d.disciplinasSemNm3.join('\n')}</td></tr>`).join('') +
+      `</tbody></table>`;
+  } else {
+    listaNm3.innerHTML = '<p><span class="badge ok">Todos os alunos estão com NM3 lançada.</span></p>';
+  }
+  const tbody = $('tbody'); tbody.innerHTML = '';
+  dados.forEach(d => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${d.aluno}</strong><div class="small">${d.totalDisciplinas} disciplinas lidas</div></td>
+      <td><span class="badge ${d.situacao==='RISCO'?'risco':'ok'}">${d.situacao}</span></td>
+      <td><span class="badge ok">${d.nm3Lancadas}/${d.totalDisciplinas}</span></td>
+      <td>${d.totalFaltas}</td>
+      <td class="disciplinas">${d.emRisco.length ? d.emRisco.map(r => `${r.disciplina} (${String(r.media.toFixed(1)).replace('.', ',')})`).join('\n') : '-'}</td>
+      <td>${d.obs}</td>`;
+    tbody.appendChild(tr);
+  });
+  $('results').classList.remove('hidden');
+}
+
+document.addEventListener('click', (ev) => {
+  if(ev.target && ev.target.id === 'btnPdf') {
+    const area = document.getElementById('reportArea');
+    if(!area || !area.innerText.trim()){
+      alert('Antes de gerar o PDF, analise o boletim.');
+      return;
+    }
+
+    /*
+      Uso de impressão nativa do navegador.
+      Motivo: em arquivo local (file://), bibliotecas como html2pdf/html2canvas
+      podem gerar página em branco por restrições do navegador e por tabelas grandes.
+      Esta alternativa copia o relatório já renderizado para uma nova janela
+      e abre a opção Imprimir/Salvar como PDF.
+    */
+    const janela = window.open('', '_blank');
+    if(!janela){
+      alert('O navegador bloqueou a janela de impressão. Libere pop-ups para este arquivo.');
+      return;
+    }
+    janela.document.open();
+    janela.document.write(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Análise de Risco - Boletim Escolar</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;color:#0b1b33;margin:18px;background:#fff}
+  h1,h2,h3{margin:0 0 12px;color:#0f2f66}
+  .card{border:1px solid #dbe3ee;border-radius:12px;padding:14px;margin-bottom:14px;break-inside:avoid;page-break-inside:avoid}
+  .turmaTitulo{font-size:20px;font-weight:bold;margin-bottom:12px;color:#0f2f66}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+  .metric{border:1px solid #dbe3ee;border-radius:10px;padding:10px;background:#fbfdff}
+  .metric span{color:#64748b;font-weight:bold;font-size:12px}.metric b{font-size:22px;display:block;margin-top:4px}
+  table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #dbe3ee;padding:6px;text-align:left;vertical-align:top}th{background:#f5f7fb}
+  .badge{display:inline-block;border-radius:999px;padding:3px 7px;font-weight:bold;font-size:10px}.risco{background:#fee2e2;color:#b91c1c}.atencao{background:#fef3c7;color:#92400e}.ok{background:#dcfce7;color:#166534}
+  .disciplinas{white-space:pre-line}.faltasAlta{color:#b91c1c;font-weight:bold}.small{font-size:10px;color:#64748b}.actions{display:none}.sectionTag{display:inline-block;background:#92400e;color:white;border-radius:999px;padding:4px 8px;font-weight:bold;font-size:10px;margin-bottom:6px}
+  @page{size:A4 landscape;margin:10mm}
+
+.calendarGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:14px}.calendarCard{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fbfdff}.calendarCard h3{margin:0;padding:14px 16px;background:#e8f3df;color:#0f2f66}.calendarPreview{height:360px;background:#f8fafc;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.calendarPreview iframe{width:100%;height:100%;border:0}.calendarActions{display:flex;gap:10px;flex-wrap:wrap;padding:14px 16px}.calendarActions a{display:inline-block;text-decoration:none;background:#2563eb;color:#fff;border-radius:10px;padding:10px 14px;font-weight:bold}.calendarActions a.secondary{background:#16a34a}.calendarNote{font-size:13px;color:var(--muted);margin:8px 0 0}@media(max-width:850px){.calendarGrid{grid-template-columns:1fr}.calendarPreview{height:300px}}@media print{#calendariosIniciais{display:none!important}}
+</style>
+</head>
+<body>
+<h1>Análise de Risco - Boletim Escolar</h1>
+${area.innerHTML}
+<script>window.onload=function(){setTimeout(function(){window.print();},300)};<\/script>
+</body>
+</html>`);
+    janela.document.close();
+  }
+});
+
+$('btnAnalisar').addEventListener('click', async () => {
+  const file = $('pdfFile').files[0];
+  if(!file){ $('status').textContent = 'Selecione o PDF do boletim.'; return; }
+  $('status').textContent = 'Lendo PDF e identificando alunos...';
+  $('results').classList.add('hidden');
+  try{
+    const alunos = await extrairAlunos(file);
+    if(!alunos.length){
+      $('status').innerHTML = '<div class="aviso">Não consegui identificar alunos no PDF. Confira se o arquivo é o boletim gerado pelo ISEDUC.</div>';
+      return;
+    }
+    const dados = analisar(alunos);
+    render(dados);
+    $('status').textContent = `Análise concluída: ${dados.length} aluno(s) encontrado(s).`;
+  }catch(e){
+    console.error(e);
+    $('status').innerHTML = `<div class="aviso">Erro ao analisar o PDF: ${e.message || e}</div>`;
+  }
+});
+</script>
+</body>
+</html>
