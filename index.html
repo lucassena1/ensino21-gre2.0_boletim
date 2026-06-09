@@ -6,6 +6,8 @@
 <title>Análise de Risco - Boletim Escolar</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
 :root{--bg:#eef3f8;--card:#fff;--text:#0b1b33;--muted:#64748b;--line:#dbe3ee;--red:#dc2626;--amber:#d97706;--green:#16a34a;--blue:#2563eb}
 *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
@@ -121,6 +123,7 @@ table{width:100%;border-collapse:collapse;background:white;border:1px solid var(
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const $ = id => document.getElementById(id);
+let dadosGerados = []; // guarda os dados analisados para exportar em PDF organizado
 const isNum = s => /^\d+(?:[.,]\d+)?$/.test(String(s).trim());
 const toNum = s => Number(String(s).replace(',', '.'));
 const clean = s => String(s || '').replace(/\s+/g,' ').trim();
@@ -247,6 +250,7 @@ function analisar(alunos){
 }
 
 function render(dados){
+  dadosGerados = dados;
   const turma = dados.find(d => d.turma && d.turma !== 'Turma não identificada')?.turma || 'Turma não identificada';
   $('turmaTitulo').textContent = `TURMA: ${turma}`;
   $('totalAlunos').textContent = dados.length;
@@ -280,55 +284,164 @@ function render(dados){
   $('results').classList.remove('hidden');
 }
 
+function textoSeguro(valor){
+  return String(valor ?? '').replace(/\n/g, ' ').trim();
+}
+
+function gerarPdfOrganizado(){
+  if(!dadosGerados || !dadosGerados.length){
+    alert('Antes de gerar o PDF, analise o boletim.');
+    return;
+  }
+  if(!window.jspdf || !window.jspdf.jsPDF){
+    alert('A biblioteca de PDF ainda não carregou. Verifique a internet e tente novamente.');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margem = 8;
+  const topoConteudo = 27; // evita corte/sobreposição do cabeçalho nas quebras de página
+  const margemRodape = 14;
+  const turma = dadosGerados.find(d => d.turma && d.turma !== 'Turma não identificada')?.turma || 'Turma não identificada';
+  const data = new Date().toLocaleDateString('pt-BR');
+
+  function cabecalho(){
+    doc.setFillColor(15, 47, 102);
+    doc.rect(0, 0, pageW, 18, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('Análise de Risco - Boletim Escolar', margem, 11);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Turma: ${turma}`, pageW - margem, 8, { align: 'right' });
+    doc.text(`Gerado em: ${data}`, pageW - margem, 13, { align: 'right' });
+    doc.setTextColor(11, 27, 51);
+  }
+
+  function rodape(){
+    const paginas = doc.internal.getNumberOfPages();
+    for(let i=1;i<=paginas;i++){
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Página ${i} de ${paginas}`, pageW - margem, pageH - 6, { align: 'right' });
+    }
+    doc.setTextColor(11, 27, 51);
+  }
+
+  cabecalho();
+  let y = topoConteudo;
+
+  const totalAlunos = dadosGerados.length;
+  const totalRisco = dadosGerados.filter(d=>d.situacao==='RISCO').length;
+  const totalNm3Completa = dadosGerados.filter(d=>d.nm3Lancadas===d.totalDisciplinas).length;
+  const totalNm3Faltando = dadosGerados.filter(d=>d.disciplinasSemNm3 && d.disciplinasSemNm3.length).length;
+  const totalFaltas = dadosGerados.filter(d=>d.faltasAltas && d.faltasAltas.length).length;
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(11);
+  doc.text('Resumo geral da turma', margem, y);
+  y += 4;
+
+  doc.autoTable({
+    startY: y,
+    margin: { top: topoConteudo, left: margem, right: margem, bottom: margemRodape },
+    theme: 'grid',
+    head: [['Total de alunos', 'Alunos em risco', 'NM3 completa', 'NM3 faltando', 'Comp. acima limite faltas']],
+    body: [[totalAlunos, totalRisco, totalNm3Completa, totalNm3Faltando, totalFaltas]],
+    styles: { fontSize: 10, halign: 'center', cellPadding: 3 },
+    headStyles: { fillColor: [15,47,102], textColor: 255, fontStyle: 'bold' },
+    didDrawPage: cabecalho
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  const nm3Faltando = dadosGerados.filter(d=>d.disciplinasSemNm3 && d.disciplinasSemNm3.length);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(11);
+  doc.text('Alunos com NM3 faltando', margem, y);
+  y += 4;
+
+  if(nm3Faltando.length){
+    doc.autoTable({
+      startY: y,
+      margin: { top: topoConteudo, left: margem, right: margem, bottom: margemRodape },
+      theme: 'grid',
+      head: [['Aluno', 'NM3 lançada', 'Disciplinas sem NM3']],
+      body: nm3Faltando.map(d => [
+        textoSeguro(d.aluno),
+        `${d.nm3Lancadas}/${d.totalDisciplinas}`,
+        d.disciplinasSemNm3.join('; ')
+      ]),
+      styles: { fontSize: 8, cellPadding: 2.2, overflow: 'linebreak', valign: 'top' },
+      headStyles: { fillColor: [146,64,14], textColor: 255, fontStyle: 'bold' },
+      columnStyles: { 0:{cellWidth:55}, 1:{cellWidth:25, halign:'center'}, 2:{cellWidth:'auto'} },
+      didDrawPage: cabecalho
+    });
+    y = doc.lastAutoTable.finalY + 8;
+  } else {
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.text('Todos os alunos estão com NM3 lançada.', margem, y);
+    y += 8;
+  }
+
+  if(y > pageH - 45){ doc.addPage(); cabecalho(); y = topoConteudo; }
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(11);
+  doc.text('Detalhamento por aluno', margem, y);
+  y += 4;
+
+  doc.autoTable({
+    startY: y,
+    margin: { top: topoConteudo, left: margem, right: margem, bottom: margemRodape },
+    theme: 'grid',
+    head: [['Aluno', 'Situação', 'NM3', 'Faltas', 'Disciplinas em risco', 'Observação']],
+    body: dadosGerados.map(d => [
+      textoSeguro(d.aluno),
+      d.situacao,
+      `${d.nm3Lancadas}/${d.totalDisciplinas}`,
+      String(d.totalFaltas),
+      d.emRisco.length ? d.emRisco.map(r => `${r.disciplina} (${String(r.media.toFixed(1)).replace('.', ',')})`).join('; ') : '-',
+      textoSeguro(d.obs)
+    ]),
+    styles: { fontSize: 7.2, cellPadding: 1.8, overflow: 'linebreak', valign: 'top' },
+    headStyles: { fillColor: [15,47,102], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [248,250,252] },
+    columnStyles: {
+      0:{cellWidth:48},
+      1:{cellWidth:20, halign:'center'},
+      2:{cellWidth:18, halign:'center'},
+      3:{cellWidth:16, halign:'center'},
+      4:{cellWidth:78},
+      5:{cellWidth:'auto'}
+    },
+    didParseCell: function(data){
+      if(data.section === 'body' && data.column.index === 1){
+        const valor = String(data.cell.raw || '');
+        if(valor === 'RISCO'){
+          data.cell.styles.textColor = [185, 28, 28];
+          data.cell.styles.fontStyle = 'bold';
+        } else {
+          data.cell.styles.textColor = [22, 101, 52];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    },
+    didDrawPage: cabecalho
+  });
+
+  rodape();
+  const nomeTurma = turma.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_');
+  doc.save(`relatorio_risco_${nomeTurma || 'turma'}.pdf`);
+}
+
 document.addEventListener('click', (ev) => {
   if(ev.target && ev.target.id === 'btnPdf') {
-    const area = document.getElementById('reportArea');
-    if(!area || !area.innerText.trim()){
-      alert('Antes de gerar o PDF, analise o boletim.');
-      return;
-    }
-
-    /*
-      Uso de impressão nativa do navegador.
-      Motivo: em arquivo local (file://), bibliotecas como html2pdf/html2canvas
-      podem gerar página em branco por restrições do navegador e por tabelas grandes.
-      Esta alternativa copia o relatório já renderizado para uma nova janela
-      e abre a opção Imprimir/Salvar como PDF.
-    */
-    const janela = window.open('', '_blank');
-    if(!janela){
-      alert('O navegador bloqueou a janela de impressão. Libere pop-ups para este arquivo.');
-      return;
-    }
-    janela.document.open();
-    janela.document.write(`<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>Análise de Risco - Boletim Escolar</title>
-<style>
-  body{font-family:Arial,Helvetica,sans-serif;color:#0b1b33;margin:18px;background:#fff}
-  h1,h2,h3{margin:0 0 12px;color:#0f2f66}
-  .card{border:1px solid #dbe3ee;border-radius:12px;padding:14px;margin-bottom:14px;break-inside:avoid;page-break-inside:avoid}
-  .turmaTitulo{font-size:20px;font-weight:bold;margin-bottom:12px;color:#0f2f66}
-  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
-  .metric{border:1px solid #dbe3ee;border-radius:10px;padding:10px;background:#fbfdff}
-  .metric span{color:#64748b;font-weight:bold;font-size:12px}.metric b{font-size:22px;display:block;margin-top:4px}
-  table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #dbe3ee;padding:6px;text-align:left;vertical-align:top}th{background:#f5f7fb}
-  .badge{display:inline-block;border-radius:999px;padding:3px 7px;font-weight:bold;font-size:10px}.risco{background:#fee2e2;color:#b91c1c}.atencao{background:#fef3c7;color:#92400e}.ok{background:#dcfce7;color:#166534}
-  .disciplinas{white-space:pre-line}.faltasAlta{color:#b91c1c;font-weight:bold}.small{font-size:10px;color:#64748b}.actions{display:none}.sectionTag{display:inline-block;background:#92400e;color:white;border-radius:999px;padding:4px 8px;font-weight:bold;font-size:10px;margin-bottom:6px}
-  @page{size:A4 landscape;margin:10mm}
-
-.calendarGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:14px}.calendarCard{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fbfdff}.calendarCard h3{margin:0;padding:14px 16px;background:#e8f3df;color:#0f2f66}.calendarPreview{height:360px;background:#f8fafc;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.calendarPreview iframe{width:100%;height:100%;border:0}.calendarActions{display:flex;gap:10px;flex-wrap:wrap;padding:14px 16px}.calendarActions a{display:inline-block;text-decoration:none;background:#2563eb;color:#fff;border-radius:10px;padding:10px 14px;font-weight:bold}.calendarActions a.secondary{background:#16a34a}.calendarNote{font-size:13px;color:var(--muted);margin:8px 0 0}@media(max-width:850px){.calendarGrid{grid-template-columns:1fr}.calendarPreview{height:300px}}@media print{#calendariosIniciais{display:none!important}}
-</style>
-</head>
-<body>
-<h1>Análise de Risco - Boletim Escolar</h1>
-${area.innerHTML}
-<script>window.onload=function(){setTimeout(function(){window.print();},300)};<\/script>
-</body>
-</html>`);
-    janela.document.close();
+    gerarPdfOrganizado();
   }
 });
 
